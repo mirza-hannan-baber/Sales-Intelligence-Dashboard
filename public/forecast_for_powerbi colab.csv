@@ -1,0 +1,5 @@
+forecast_month,month_label,predicted_revenue,revenue_confidence_pct,predicted_win_rate_pct,win_rate_confidence_pct
+Next_3_Months_Total,Next 3 Months,2270353.76,68.6,61.23,92.2
+2026-04,Apr 2026,535940.34,51.8,52.94,91.4
+2026-05,May 2026,762791.97,58.8,56.07,91.0
+2026-06,Jun 2026,971621.45,95.2,74.69,94.1

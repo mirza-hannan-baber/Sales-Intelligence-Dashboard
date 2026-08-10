@@ -1,0 +1,200 @@
+[
+  {
+    "month": "2023-06",
+    "actual_revenue": 1338466.0,
+    "actual_win_rate": 82.84,
+    "predicted_win_rate": 80.8
+  },
+  {
+    "month": "2023-07",
+    "actual_revenue": 696932.0,
+    "actual_win_rate": 49.12,
+    "predicted_win_rate": 49.35
+  },
+  {
+    "month": "2023-08",
+    "actual_revenue": 1050059.0,
+    "actual_win_rate": 56.82,
+    "predicted_win_rate": 56.08
+  },
+  {
+    "month": "2023-09",
+    "actual_revenue": 1235264.0,
+    "actual_win_rate": 79.21,
+    "predicted_win_rate": 78.87
+  },
+  {
+    "month": "2023-10",
+    "actual_revenue": 731980.0,
+    "actual_win_rate": 49.29,
+    "predicted_win_rate": 49.23
+  },
+  {
+    "month": "2023-11",
+    "actual_revenue": 938943.0,
+    "actual_win_rate": 52.86,
+    "predicted_win_rate": 53.82
+  },
+  {
+    "month": "2023-12",
+    "actual_revenue": 1131573.0,
+    "actual_win_rate": 78.49,
+    "predicted_win_rate": 78.22
+  },
+  {
+    "month": "2024-02",
+    "actual_revenue": 37830.33,
+    "actual_win_rate": 72.22,
+    "predicted_win_rate": 70.62
+  },
+  {
+    "month": "2024-03",
+    "actual_revenue": 1170504.71,
+    "actual_win_rate": 73.19,
+    "predicted_win_rate": 72.64
+  },
+  {
+    "month": "2024-04",
+    "actual_revenue": 784104.05,
+    "actual_win_rate": 50.86,
+    "predicted_win_rate": 52.88
+  },
+  {
+    "month": "2024-05",
+    "actual_revenue": 1082940.95,
+    "actual_win_rate": 55.4,
+    "predicted_win_rate": 54.95
+  },
+  {
+    "month": "2024-06",
+    "actual_revenue": 1438811.55,
+    "actual_win_rate": 75.68,
+    "predicted_win_rate": 75.25
+  },
+  {
+    "month": "2024-07",
+    "actual_revenue": 735669.16,
+    "actual_win_rate": 48.71,
+    "predicted_win_rate": 48.97
+  },
+  {
+    "month": "2024-08",
+    "actual_revenue": 1128418.25,
+    "actual_win_rate": 54.58,
+    "predicted_win_rate": 55.26
+  },
+  {
+    "month": "2024-09",
+    "actual_revenue": 1308439.07,
+    "actual_win_rate": 74.68,
+    "predicted_win_rate": 76.03
+  },
+  {
+    "month": "2024-10",
+    "actual_revenue": 792203.39,
+    "actual_win_rate": 50.0,
+    "predicted_win_rate": 50.33
+  },
+  {
+    "month": "2024-11",
+    "actual_revenue": 1017986.13,
+    "actual_win_rate": 54.55,
+    "predicted_win_rate": 55.06
+  },
+  {
+    "month": "2024-12",
+    "actual_revenue": 1150023.12,
+    "actual_win_rate": 74.1,
+    "predicted_win_rate": 74.62
+  },
+  {
+    "month": "2025-01",
+    "actual_revenue": 55448.72,
+    "actual_win_rate": 69.23,
+    "predicted_win_rate": 68.96
+  },
+  {
+    "month": "2025-02",
+    "actual_revenue": 20034.48,
+    "actual_win_rate": 69.23,
+    "predicted_win_rate": 68.31
+  },
+  {
+    "month": "2025-03",
+    "actual_revenue": 1254459.73,
+    "actual_win_rate": 73.97,
+    "predicted_win_rate": 72.95
+  },
+  {
+    "month": "2025-04",
+    "actual_revenue": 844767.59,
+    "actual_win_rate": 49.49,
+    "predicted_win_rate": 51.19
+  },
+  {
+    "month": "2025-05",
+    "actual_revenue": 1188997.29,
+    "actual_win_rate": 53.73,
+    "predicted_win_rate": 54.32
+  },
+  {
+    "month": "2025-06",
+    "actual_revenue": 1498425.95,
+    "actual_win_rate": 76.97,
+    "predicted_win_rate": 76.52
+  },
+  {
+    "month": "2025-07",
+    "actual_revenue": 812705.47,
+    "actual_win_rate": 48.95,
+    "predicted_win_rate": 49.46
+  },
+  {
+    "month": "2025-08",
+    "actual_revenue": 1245852.39,
+    "actual_win_rate": 57.05,
+    "predicted_win_rate": 56.46
+  },
+  {
+    "month": "2025-09",
+    "actual_revenue": 1361456.19,
+    "actual_win_rate": 73.74,
+    "predicted_win_rate": 76.49
+  },
+  {
+    "month": "2025-10",
+    "actual_revenue": 863389.41,
+    "actual_win_rate": 49.66,
+    "predicted_win_rate": 50.24
+  },
+  {
+    "month": "2025-11",
+    "actual_revenue": 1045567.25,
+    "actual_win_rate": 51.67,
+    "predicted_win_rate": 54.2
+  },
+  {
+    "month": "2025-12",
+    "actual_revenue": 1259709.58,
+    "actual_win_rate": 74.45,
+    "predicted_win_rate": 76.14
+  },
+  {
+    "month": "2026-01",
+    "actual_revenue": 45182.88,
+    "actual_win_rate": 72.0,
+    "predicted_win_rate": 70.3
+  },
+  {
+    "month": "2026-02",
+    "actual_revenue": 22109.55,
+    "actual_win_rate": 76.47,
+    "predicted_win_rate": 68.48
+  },
+  {
+    "month": "2026-03",
+    "actual_revenue": 1355513.06,
+    "actual_win_rate": 75.96,
+    "predicted_win_rate": 72.69
+  }
+]
