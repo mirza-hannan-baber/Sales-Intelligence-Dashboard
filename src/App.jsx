@@ -9,62 +9,77 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import EmployeePerformance from "./pages/EmployeePerformance";
 import AdminLayout from "./layouts/AdminLayout";
+import RevenueForecast from "./pages/RevenueForecast";
+import EmployeeRevenue from "./pages/EmployeeRevenue";
+import DealProbability from "./pages/DealProbability";
+import Employees from "./pages/Employees";
+import Deals from "./pages/Deals";
+import Users from "./pages/Users";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 
+// Protected Route Component
+const ProtectedRoute = ({ children, requireSuperadmin = false }) => {
+  const { isAuthenticated, isSuperadmin, loading } = useAuth();
+
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a', color: '#fff' }}>Loading Sales Intelligence...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requireSuperadmin && !isSuperadmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
 
-      <Routes>
+          {/* PUBLIC LOGIN */}
+          <Route path="/login" element={<Login />} />
 
-        {/* LOGIN */}
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-
-        {/* ADMIN AREA */}
-        <Route
-          element={<AdminLayout />}
-        >
-
+          {/* PROTECTED APP LAYOUT */}
           <Route
-            path="/dashboard"
-            element={<Dashboard />}
-          />
-          <Route
-            path="/employee-performance"
-            element={<EmployeePerformance />}
-          />
-        </Route>
+            element={
+              <ProtectedRoute>
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/revenue-forecast" element={<RevenueForecast />} />
+            <Route path="/employee-revenue" element={<EmployeeRevenue />} />
+            <Route path="/employee-performance" element={<EmployeePerformance />} />
+            <Route path="/deal-probability" element={<DealProbability />} />
+            <Route path="/deals" element={<Deals />} />
+            <Route path="/employees" element={<Employees />} />
 
-
-        {/* DEFAULT */}
-        <Route
-          path="/"
-          element={
-            <Navigate
-              to="/login"
-              replace
+            {/* SUPERADMIN ONLY */}
+            <Route
+              path="/users"
+              element={
+                <ProtectedRoute requireSuperadmin={true}>
+                  <Users />
+                </ProtectedRoute>
+              }
             />
-          }
-        />
+          </Route>
 
+          {/* DEFAULT REDIRECT */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* UNKNOWN ROUTE */}
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/login"
-              replace
-            />
-          }
-        />
+          {/* UNKNOWN ROUTE */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
 
-      </Routes>
-
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
