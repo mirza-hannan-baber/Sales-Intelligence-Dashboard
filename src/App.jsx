@@ -11,7 +11,6 @@ import EmployeePerformance from "./pages/EmployeePerformance";
 import AdminLayout from "./layouts/AdminLayout";
 import RevenueForecast from "./pages/RevenueForecast";
 import EmployeeRevenue from "./pages/EmployeeRevenue";
-import DealProbability from "./pages/DealProbability";
 import Employees from "./pages/Employees";
 import Deals from "./pages/Deals";
 import Users from "./pages/Users";
@@ -57,7 +56,6 @@ export default function App() {
             <Route path="/revenue-forecast" element={<RevenueForecast />} />
             <Route path="/employee-revenue" element={<EmployeeRevenue />} />
             <Route path="/employee-performance" element={<EmployeePerformance />} />
-            <Route path="/deal-probability" element={<DealProbability />} />
             <Route path="/deals" element={<Deals />} />
             <Route path="/employees" element={<Employees />} />
 
@@ -73,10 +71,10 @@ export default function App() {
           </Route>
 
           {/* DEFAULT REDIRECT */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<ProtectedRoute><Navigate to="/dashboard" replace /></ProtectedRoute>} />
 
           {/* UNKNOWN ROUTE */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
 
         </Routes>
       </BrowserRouter>

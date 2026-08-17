@@ -49,33 +49,30 @@ export default function EmployeeRevenue() {
 
   const handleRunPrediction = async () => {
     if (!selectedAgentId) return;
+    const agent = agents.find((a) => String(a.id) === String(selectedAgentId));
+    if (!agent) return;
+
     setPredicting(true);
     setError(null);
     try {
-      const perf = await agentsService.getAgentPerformance(selectedAgentId);
-      const f = perf.predictionFeatures || {};
+      // Send only the employee identifier. The backend rebuilds that rep's feature
+      // vector from the CRM tables, so the request can never carry another rep's
+      // numbers or a stale client-side copy of them.
       const result = await predictionsService.predictEmployeeRevenue({
-        salesAgent: f.salesAgent,
-        lag1: Number(f.lag1) || 0,
-        lag2: Number(f.lag2) || 0,
-        lag3: Number(f.lag3) || 0,
-        lag6: Number(f.lag6) || 0,
-        lag12: Number(f.lag12) || 0,
-        rollingMean3: Number(f.rollingMean3) || 0,
-        rollingMean6: Number(f.rollingMean6) || 0,
-        rollingMean12: Number(f.rollingMean12) || 0,
-        monthNumber: f.monthNumber || 3,
-        quarter: f.quarter || 1,
-        year: f.year || 2026,
+        salesAgent: agent.name,
       });
 
       if (result.error || result.detail) {
-        setError(result.error || result.detail || "Prediction failed.");
+        setError(
+          result.error ||
+            result.detail ||
+            "ML prediction service is currently unavailable. Please check the ML service."
+        );
         return;
       }
       setPredictionResult(result);
     } catch (err) {
-      setError("Employee revenue prediction failed. Check ML service.");
+      setError("ML prediction service is currently unavailable. Please check the ML service.");
       console.error("Error predicting employee revenue:", err);
     } finally {
       setPredicting(false);
@@ -195,16 +192,25 @@ export default function EmployeeRevenue() {
           <h3 style={{ margin: "0 0 8px 0" }}>Revenue Forecast for {predictionResult.sales_agent}</h3>
           <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
             <div>
-              <span style={{ fontSize: "0.85rem", color: "#4338ca" }}>Predicted Next Month Revenue:</span>
+              <span style={{ fontSize: "0.85rem", color: "#4338ca" }}>Predicted Next Year Revenue:</span>
               <div style={{ fontSize: "1.5rem", fontWeight: "700", color: "#3730a3" }}>
                 ${Number(predictionResult.predicted_revenue).toLocaleString()}
               </div>
             </div>
-            <div>
+            {/* <div>
               <span style={{ fontSize: "0.85rem", color: "#4338ca" }}>Model Used:</span>
               <div style={{ fontSize: "1rem", fontWeight: "600", color: "#312e81" }}>{predictionResult.model_used}</div>
-            </div>
+            </div> */}
           </div>
+          {predictionResult.inputs && (
+            <div style={{ marginTop: "12px", fontSize: "0.8rem", color: "#4338ca" }}>
+              <span style={{ fontWeight: 600 }}>Features used: </span>
+              revenue ${Number(predictionResult.inputs.revenue).toLocaleString()} ·{" "}
+              {predictionResult.inputs.years_active} yrs active ·{" "}
+              {predictionResult.inputs.deals_worked} deals worked ·{" "}
+              {(Number(predictionResult.inputs.win_rate) * 100).toFixed(1)}% win rate
+            </div>
+          )}
         </div>
       )}
 

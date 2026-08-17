@@ -4,8 +4,8 @@ import { Eye, EyeOff, LockKeyhole, Mail, AlertCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
-  const [email, setEmail] = useState("admin@company.com");
-  const [password, setPassword] = useState("Admin123!");
+  // const [email, setEmail] = useState("admin@company.com");
+  // const [password, setPassword] = useState("Admin123!");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -31,15 +31,15 @@ export default function Login() {
     }
   };
 
-  const handleQuickLogin = (role) => {
-    if (role === "admin") {
-      setEmail("admin@company.com");
-      setPassword("Admin123!");
-    } else {
-      setEmail("user@company.com");
-      setPassword("User123!");
-    }
-  };
+  // const handleQuickLogin = (role) => {
+  //   if (role === "admin") {
+  //     setEmail("admin@company.com");
+  //     setPassword("Admin123!");
+  //   } else {
+  //     setEmail("user@company.com");
+  //     setPassword("User123!");
+  //   }
+  // };
 
   return (
     <div className="login-page">
@@ -127,7 +127,7 @@ export default function Login() {
           )}
 
           {/* Quick Preset Buttons */}
-          <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+          {/* <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
             <button
               type="button"
               onClick={() => handleQuickLogin("admin")}
@@ -160,7 +160,7 @@ export default function Login() {
             >
               Demo Standard User
             </button>
-          </div>
+          </div> */}
 
           <form onSubmit={handleSubmit}>
             {/* EMAIL */}
@@ -173,7 +173,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@company.com"
+                  placeholder="Enter your email address "
                   required
                 />
               </div>
@@ -216,10 +216,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="login-note">
-            <LockKeyhole size={15} />
-            <span>Secured via ASP.NET Core Identity & JWT</span>
-          </div>
+          
         </div>
       </div>
     </div>

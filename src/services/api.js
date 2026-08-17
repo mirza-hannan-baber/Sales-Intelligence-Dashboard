@@ -1,33 +1,19 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5082/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5082/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
-     'Content-Type': 'application/json',
   },
 });
 
-// Request Interceptor: Attach JWT Bearer token if present
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response Interceptor: Handle 401 Unauthorized
+// Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
@@ -41,16 +27,12 @@ api.interceptors.response.use(
 export const authService = {
   login: async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    if (res.data.token) {
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('refreshToken', res.data.refreshToken);
+    if (res.data) {
       localStorage.setItem('user', JSON.stringify(res.data));
     }
     return res.data;
   },
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     window.location.href = '/login';
   },
@@ -126,24 +108,13 @@ export const predictionsService = {
     const res = await api.post('/predictions/employee-revenue', data);
     return res.data;
   },
-  predictDealProbability: async () => {
-    try {
-      const res = await api.post('/predictions/deal-probability');
-      return res.data;
-    } catch (err) {
-      if (err.response && err.response.data) {
-        return err.response.data;
-      }
-      return { status: 'model_not_available', message: 'Model not available yet — prediction coming soon' };
-    }
-  },
   getHistory: async () => {
     const res = await api.get('/predictions/history');
     return res.data;
   },
 };
 
-// User Management Service (Superadmin only)
+// User Management Service
 export const userService = {
   getUsers: async (params) => {
     const res = await api.get('/users', { params });
@@ -163,4 +134,21 @@ export const userService = {
   },
 };
 
+// Agent Service (Groq SQL Agent)
+export const agentService = {
+  ask: async (question) => {
+    const res = await api.post('/agent/ask', { question });
+    return res.data;
+  },
+};
+
+// Chat Service
+export const chatService = {
+  sendMessage: async (message) => {
+    const res = await api.post('/agent/ask', { question: message });
+    return res.data;
+  },
+};
+
 export default api;
+

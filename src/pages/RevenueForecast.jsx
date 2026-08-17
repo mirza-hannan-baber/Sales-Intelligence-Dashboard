@@ -18,14 +18,15 @@ import {
   Legend,
 } from "recharts";
 import { dashboardService, predictionsService } from "../services/api";
+import { FEATURE_LABELS } from "../utils/featureLabels";
 
 export default function RevenueForecast() {
-  const [lag1, setLag1] = useState(0);
-  const [lag2, setLag2] = useState(0);
-  const [lag3, setLag3] = useState(0);
-  const [rollingMean, setRollingMean] = useState(0);
+  const [lag1, setLag1] = useState("250000");
+  const [lag2, setLag2] = useState("240000");
+  const [lag3, setLag3] = useState("230000");
+  const [rollingMean, setRollingMean] = useState("240000");
   const [predicting, setPredicting] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loadingBaseline, setLoadingBaseline] = useState(true);
   const [error, setError] = useState(null);
 
   const [forecastResult, setForecastResult] = useState(null);
@@ -37,7 +38,7 @@ export default function RevenueForecast() {
   }, []);
 
   const loadBaseline = async () => {
-    setLoading(true);
+    setLoadingBaseline(true);
     setError(null);
     try {
       const kpi = await dashboardService.getKpis({ months: 6 });
@@ -46,10 +47,10 @@ export default function RevenueForecast() {
       const l3 = Number(kpi.lag3) || 0;
       const rm = Number(kpi.rollingMean) || Math.round((l1 + l2 + l3) / 3);
 
-      setLag1(l1);
-      setLag2(l2);
-      setLag3(l3);
-      setRollingMean(rm);
+      setLag1(String(l1));
+      setLag2(String(l2));
+      setLag3(String(l3));
+      setRollingMean(String(rm));
       setAiConfidence(kpi.aiConfidence || "0%");
 
       const history = (kpi.revenueChart || [])
@@ -64,10 +65,10 @@ export default function RevenueForecast() {
       setChartData(history);
       setForecastResult(null);
     } catch (err) {
-      setError("Could not load revenue history from API.");
+      setError("Unable to connect to the backend service. Please make sure the backend is running.");
       console.error(err);
     } finally {
-      setLoading(false);
+      setLoadingBaseline(false);
     }
   };
 
@@ -84,24 +85,40 @@ export default function RevenueForecast() {
       });
 
       if (res.error || res.detail) {
-        setError(res.error || res.detail || "Prediction service unavailable.");
+        setError(
+          res.error ||
+            res.detail ||
+            "ML prediction service is currently unavailable. Please check the ML service."
+        );
+        return;
+      }
+
+      const predictedValue = Number(res.predicted_revenue);
+      if (!Number.isFinite(predictedValue)) {
+        setError("The forecast model returned an invalid value. Please try again.");
         return;
       }
 
       setForecastResult(res);
 
       setChartData([
-        { month: "Lag 3", actualRevenue: Number(lag3), predictedRevenue: null },
-        { month: "Lag 2", actualRevenue: Number(lag2), predictedRevenue: null },
-        { month: "Lag 1", actualRevenue: Number(lag1), predictedRevenue: null },
+        { month: FEATURE_LABELS.lag_3, actualRevenue: Number(lag3), predictedRevenue: null },
+        { month: FEATURE_LABELS.lag_2, actualRevenue: Number(lag2), predictedRevenue: null },
+        // Boundary point: Last Month's Revenue is both the last actual and the start of the forecast,
+        // so the two segments join with no gap.
+        {
+          month: FEATURE_LABELS.lag_1,
+          actualRevenue: Number(lag1),
+          predictedRevenue: Number(lag1),
+        },
         {
           month: "Next (Fcst)",
           actualRevenue: null,
-          predictedRevenue: Number(res.predicted_revenue),
+          predictedRevenue: predictedValue,
         },
       ]);
     } catch (err) {
-      setError("Revenue prediction failed. Is the ML service running on port 5001?");
+      setError("ML prediction service is currently unavailable. Please check the ML service.");
       console.error("Error generating revenue forecast:", err);
     } finally {
       setPredicting(false);
@@ -141,7 +158,7 @@ export default function RevenueForecast() {
     },
   ];
 
-  if (loading) {
+  if (loadingBaseline) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "400px", color: "#6366f1" }}>
         <Loader2 className="animate-spin" size={32} />
@@ -155,9 +172,8 @@ export default function RevenueForecast() {
       <div className="page-title">
         <div>
           <h1>Revenue Forecast</h1>
-          <p>Predict future revenue using the trained Random Forest model (lags pre-filled from live DB)</p>
+          <p>Predict future revenue using the trained lag revenue model (lags pre-filled from live DB)</p>
         </div>
-        <button className="secondary-button" onClick={loadBaseline}>Reload from DB</button>
       </div>
 
       {error && (
@@ -172,19 +188,19 @@ export default function RevenueForecast() {
         </h3>
         <form onSubmit={handleGenerateForecast} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px", alignItems: "end" }}>
           <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Lag 1 Revenue ($)</label>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>{FEATURE_LABELS.lag_1} ($)</label>
             <input type="number" value={lag1} onChange={(e) => setLag1(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", background: "#0f172a", border: "1px solid #334155", color: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Lag 2 Revenue ($)</label>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>{FEATURE_LABELS.lag_2} ($)</label>
             <input type="number" value={lag2} onChange={(e) => setLag2(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", background: "#0f172a", border: "1px solid #334155", color: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Lag 3 Revenue ($)</label>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>{FEATURE_LABELS.lag_3} ($)</label>
             <input type="number" value={lag3} onChange={(e) => setLag3(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", background: "#0f172a", border: "1px solid #334155", color: "#fff" }} />
           </div>
           <div>
-            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>Rolling 3M Mean ($)</label>
+            <label style={{ display: "block", fontSize: "0.8rem", color: "#cbd5e1", marginBottom: "4px" }}>{FEATURE_LABELS.rolling_mean_3} ($)</label>
             <input type="number" value={rollingMean} onChange={(e) => setRollingMean(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: "6px", background: "#0f172a", border: "1px solid #334155", color: "#fff" }} />
           </div>
           <div>
@@ -218,7 +234,7 @@ export default function RevenueForecast() {
         <div className="chart-header">
           <div>
             <h3>Revenue Forecast Chart</h3>
-            <p>Historical revenue from DB vs live AI model prediction</p>
+            <p>One continuous line — solid indigo for actual, dashed orange for predicted</p>
           </div>
         </div>
 
@@ -227,11 +243,20 @@ export default function RevenueForecast() {
             <LineChart data={chartData} margin={{ top: 10, right: 15, left: 10, bottom: 10 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} tickFormatter={(value) => `$${value / 1000}K`} />
-              <Tooltip formatter={(value, name) => [`$${Number(value).toLocaleString()}`, name === "actualRevenue" ? "Actual Revenue" : "Predicted Revenue"]} />
+              <YAxis tick={{ fontSize: 11 }} tickFormatter={(value) => `$${Number(value || 0) / 1000}K`} />
+              <Tooltip
+                formatter={(value, name, item) => {
+                  if (value == null) return [null, null];
+                  const seriesName = item?.dataKey === "actualRevenue" || name === "Actual" || name === "actualRevenue" ? "Actual" : "Predicted";
+                  return [
+                    `$${Number(value).toLocaleString()}`,
+                    seriesName,
+                  ];
+                }}
+              />
               <Legend />
-              <Line type="monotone" dataKey="actualRevenue" name="Actual Revenue" stroke="#4f46e5" strokeWidth={3} connectNulls={false} dot={{ r: 5 }} />
-              <Line type="monotone" dataKey="predictedRevenue" name="Predicted Revenue" stroke="#10b981" strokeWidth={3} strokeDasharray="6 5" connectNulls={false} dot={{ r: 7 }} />
+              <Line type="monotone" dataKey="actualRevenue" name="Actual" stroke="#6366f1" strokeWidth={3} connectNulls={false} dot={{ r: 5, fill: "#6366f1" }} />
+              <Line type="monotone" dataKey="predictedRevenue" name="Predicted" stroke="#f97316" strokeWidth={3} strokeDasharray="6 6" connectNulls={false} dot={{ r: 5, fill: "#f97316" }} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -239,3 +264,4 @@ export default function RevenueForecast() {
     </div>
   );
 }
+

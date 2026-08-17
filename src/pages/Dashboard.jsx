@@ -68,36 +68,60 @@ export default function Dashboard() {
     );
   }
 
+  // Colour a badge by direction. A change of null means the comparison is not
+  // meaningful for that card, so it renders as neutral context instead.
+  const toneOf = (change) => {
+    if (!change) return "neutral";
+    if (change.startsWith("-")) return "down";
+    if (change.startsWith("+") && !/^\+0(\.0)?(%|pp)$/.test(change)) return "up";
+    return "neutral";
+  };
+
+  const baseline = data?.previousPeriodLabel;
+  const period = data?.completeThrough;
+  const vsPeriod = baseline && period ? `${period} vs ${baseline}` : "";
+
   const stats = [
     {
+      // Lifetime cumulative: a running total has no meaningful period-over-period
+      // % change, so this card carries context rather than a percentage badge.
       title: "Total Revenue",
       value: data?.totalRevenue || "$0",
-      change: data?.revenueChange || "0%",
+      change: "Lifetime",
+      tone: "neutral",
       icon: DollarSign,
+      footnote: period ? `Complete data through ${period}` : "",
     },
     {
       title: "Predicted Revenue",
       value: data?.predictedRevenue || "$0",
-      change: data?.predictedChange || "0%",
+      change: data?.predictedChange || "—",
+      tone: toneOf(data?.predictedChange),
       icon: TrendingUp,
+      footnote: period ? `Next month vs ${period}` : "",
     },
     {
       title: "Win Rate",
       value: data?.winRate || "0%",
-      change: data?.winRateChange || "0%",
+      change: data?.winRateChange || "—",
+      tone: toneOf(data?.winRateChange),
       icon: Target,
+      footnote: vsPeriod,
     },
     {
       title: "AI Confidence",
       value: data?.aiConfidence || "0%",
       change: `${data?.wonDeals || 0} won deals`,
+      tone: "neutral",
       icon: BrainCircuit,
+      footnote: "",
     },
   ];
 
   const revenueChart = data?.revenueChart || [];
   const winRateChart = data?.winRateChart || [];
   const winDomainMin = Math.max(0, Math.floor(Math.min(...winRateChart.map((d) => d.winRate), 100) / 10) * 10 - 10);
+  const excluded = data?.excludedIncompleteMonths || [];
 
   return (
     <div className="dashboard-page">
@@ -124,10 +148,11 @@ export default function Dashboard() {
                 <div className="stat-icon">
                   <Icon size={19} />
                 </div>
-                <span className="stat-change">{stat.change}</span>
+                <span className={`stat-change is-${stat.tone}`}>{stat.change}</span>
               </div>
               <p>{stat.title}</p>
               <h2>{stat.value}</h2>
+              {stat.footnote && <span className="stat-footnote">{stat.footnote}</span>}
             </div>
           );
         })}
@@ -137,7 +162,11 @@ export default function Dashboard() {
         <div className="chart-header">
           <div>
             <h3>Revenue Overview</h3>
-            <p>Actual vs model-style predicted revenue from database deals</p>
+            <p>
+              One continuous line: solid indigo through the last complete month,
+              dashed orange for the forecast
+              {excluded.length > 0 && ` (excludes still-accumulating ${excluded.join(", ")})`}
+            </p>
           </div>
           <select
             value={months}
@@ -169,30 +198,43 @@ export default function Dashboard() {
                   }
                 />
                 <Tooltip
-                  formatter={(value, name) => [
-                    `$${Number(value).toLocaleString()}`,
-                    name === "actualRevenue" ? "Actual Revenue" : "Predicted Revenue",
-                  ]}
+                  formatter={(value, name, item) => {
+                    if (value == null) return [null, null];
+                    const seriesLabel =
+                      item?.dataKey === "actualRevenue" || name === "Actual" || name === "actualRevenue"
+                        ? "Actual"
+                        : "Predicted";
+                    return [`$${Number(value).toLocaleString()}`, seriesLabel];
+                  }}
                 />
                 <Legend />
+                {/*
+                  One continuous Revenue line rendered as two <Line>s that share
+                  the boundary month (that month has BOTH actualRevenue and
+                  predictedRevenue). The actual series is null after the boundary;
+                  the predicted series is null before it. Result: one unbroken
+                  line with a single colour/style change at the actual→forecast
+                  handoff, and no visual gap.
+                */}
                 <Line
                   type="monotone"
                   dataKey="actualRevenue"
-                  name="Actual Revenue"
-                  stroke="#4f46e5"
+                  name="Actual"
+                  stroke="#6366f1"
                   strokeWidth={3}
                   connectNulls={false}
-                  dot={{ r: 4 }}
+                  dot={{ r: 4, fill: "#6366f1" }}
                   activeDot={{ r: 7 }}
                 />
                 <Line
                   type="monotone"
                   dataKey="predictedRevenue"
-                  name="Predicted Revenue"
-                  stroke="#94a3b8"
+                  name="Predicted"
+                  stroke="#f97316"
                   strokeWidth={3}
-                  strokeDasharray="6 5"
-                  dot={{ r: 4 }}
+                  strokeDasharray="6 6"
+                  connectNulls={false}
+                  dot={{ r: 4, fill: "#f97316" }}
                   activeDot={{ r: 7 }}
                 />
               </LineChart>
@@ -246,8 +288,8 @@ export default function Dashboard() {
             </div>
           </div>
           <div style={{ padding: "16px", fontSize: "0.875rem", color: "#64748b" }}>
-            <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ .NET 9 Web API connected</p>
-            <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ SQLite Database ({data?.totalDeals || 0} deals)</p>
+            <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ Analysis through charts</p>
+            <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ {data?.totalDeals || 0} deals analyzed</p>
             <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ Chart range: last {months} months</p>
             <p style={{ margin: "4px 0", color: "#1e293b", fontWeight: "600" }}>✓ Role: {user?.role || "User"}</p>
           </div>
