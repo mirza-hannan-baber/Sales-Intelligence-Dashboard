@@ -6,7 +6,6 @@ namespace SalesIntelligence.Api.Services
 {
     /// <summary>
     /// Maps natural-language data questions to deterministic query plans.
-    /// Ollama may assist, but this parser ensures numerical questions always reach the DB engine.
     /// </summary>
     public static class DataQuestionParser
     {
