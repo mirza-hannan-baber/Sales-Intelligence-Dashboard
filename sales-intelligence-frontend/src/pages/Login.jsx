@@ -6,6 +6,8 @@ import { useAuth } from "../context/AuthContext";
 export default function Login() {
   // const [email, setEmail] = useState("admin@company.com");
   // const [password, setPassword] = useState("Admin123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

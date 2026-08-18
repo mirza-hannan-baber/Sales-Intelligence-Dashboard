@@ -10,7 +10,6 @@ namespace SalesIntelligence.Api.Controllers
     public class AccountsController : ControllerBase
     {
         private readonly ApplicationDbContext _db;
-
         public AccountsController(ApplicationDbContext db)
         {
             _db = db;

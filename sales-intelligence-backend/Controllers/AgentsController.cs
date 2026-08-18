@@ -20,19 +20,24 @@ namespace SalesIntelligence.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAgents([FromQuery] string? search, [FromQuery] string? department)
+        public async Task<IActionResult> GetAgents([FromQuery] string? search, [FromQuery] string? department, [FromQuery] string? regionalOffice)
         {
             var query = _db.Agents.AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(search))
             {
                 var s = search.ToLower();
-                query = query.Where(a => a.Name.ToLower().Contains(s) || a.Email.ToLower().Contains(s));
+                query = query.Where(a => a.Name.ToLower().Contains(s) || a.Email.ToLower().Contains(s) || (a.RegionalOffice != null && a.RegionalOffice.ToLower().Contains(s)));
             }
 
             if (!string.IsNullOrWhiteSpace(department) && !department.Equals("All", StringComparison.OrdinalIgnoreCase))
             {
                 query = query.Where(a => a.Department == department);
+            }
+
+            if (!string.IsNullOrWhiteSpace(regionalOffice) && !regionalOffice.Equals("All", StringComparison.OrdinalIgnoreCase))
+            {
+                query = query.Where(a => a.RegionalOffice == regionalOffice);
             }
 
             var agents = (await query.ToListAsync())
@@ -55,6 +60,7 @@ namespace SalesIntelligence.Api.Controllers
             var avgRevenue = totalAgents > 0 ? agents.Average(a => (double)a.TotalRevenue) : 0;
             var avgWinRate = totalAgents > 0 ? agents.Average(a => a.WinRate) : 0;
             var topPerformer = agents.OrderByDescending(a => a.PerformanceScore).FirstOrDefault();
+            var regionalOffices = await _db.Agents.Where(a => !string.IsNullOrEmpty(a.RegionalOffice)).Select(a => a.RegionalOffice).Distinct().OrderBy(r => r).ToListAsync();
 
             return Ok(new
             {
@@ -64,6 +70,7 @@ namespace SalesIntelligence.Api.Controllers
                 topPerformerName = topPerformer?.Name ?? "N/A",
                 topPerformerScore = topPerformer?.PerformanceScore ?? 0,
                 performanceScoreBasis = "win_rate_percentage",
+                filterOptions = new { regionalOffices },
                 items = agents
             });
         }

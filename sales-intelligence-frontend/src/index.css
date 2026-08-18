@@ -2234,28 +2234,53 @@ textarea {
   color: #94a3b8;
 }
 
-.deals-filter {
-  height: 38px;
-
+.deals-filter-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 7px;
-
-  padding: 0 10px;
-
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-
-  color: #64748b;
 }
 
-.deals-filter select {
-  border: none;
-  outline: none;
-  background: transparent;
+.deals-filter-wrapper .filter-icon {
+  position: absolute;
+  left: 12px;
+  color: #64748b;
+  pointer-events: none;
+  z-index: 1;
+}
 
+.deals-filter-wrapper select.deals-filter {
+  padding-left: 34px !important;
+}
+
+select.deals-filter {
+  height: 38px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding: 0 34px 0 12px !important;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   color: #334155;
   font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+select.deals-filter:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+select.deals-filter:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 /* TABLE */
@@ -2449,21 +2474,35 @@ textarea {
   color: #94a3b8;
 }
 
-.employees-filter {
+select.employees-filter {
   height: 38px;
-
-  padding: 0 12px;
-
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding: 0 34px 0 12px !important;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-
-  background: #ffffff;
-
   color: #334155;
-
   font-size: 12px;
-
+  font-weight: 500;
+  cursor: pointer;
   outline: none;
+  transition: all 0.15s ease;
+}
+
+select.employees-filter:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+select.employees-filter:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 
@@ -2711,17 +2750,35 @@ textarea {
   color: #94a3b8;
 }
 
-.users-filter {
+select.users-filter {
   height: 38px;
-  padding: 0 12px;
-
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding: 0 34px 0 12px !important;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-
-  background: #ffffff;
   color: #334155;
   font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
   outline: none;
+  transition: all 0.15s ease;
+}
+
+select.users-filter:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+select.users-filter:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .users-table-wrapper {

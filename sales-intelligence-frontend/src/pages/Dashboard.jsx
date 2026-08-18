@@ -87,7 +87,7 @@ export default function Dashboard() {
       // % change, so this card carries context rather than a percentage badge.
       title: "Total Revenue",
       value: data?.totalRevenue || "$0",
-      change: "Lifetime",
+      change: "3 years of data",
       tone: "neutral",
       icon: DollarSign,
       footnote: period ? `Complete data through ${period}` : "",

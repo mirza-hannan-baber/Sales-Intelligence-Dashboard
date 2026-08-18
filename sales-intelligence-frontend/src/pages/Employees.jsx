@@ -6,6 +6,7 @@ import {
   UserX,
   TrendingUp,
   Loader2,
+  Building2,
 } from "lucide-react";
 import { agentsService } from "../services/api";
 
@@ -16,24 +17,28 @@ export default function Employees() {
     avgRevenue: 0,
     avgWinRate: 0,
   });
+  const [regionalOffices, setRegionalOffices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [department, setDepartment] = useState("All");
+  const [regionalOffice, setRegionalOffice] = useState("All");
 
   useEffect(() => {
     fetchAgents();
-  }, [search, department]);
+  }, [search, regionalOffice]);
 
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const data = await agentsService.getAgents({ search, department });
+      const data = await agentsService.getAgents({ search, regionalOffice });
       setAgents(data.items || []);
       setStatsData({
         totalAgents: data.totalAgents || 0,
         avgRevenue: data.avgRevenue || 0,
         avgWinRate: data.avgWinRate || 0,
       });
+      if (data.filterOptions && data.filterOptions.regionalOffices) {
+        setRegionalOffices(data.filterOptions.regionalOffices);
+      }
     } catch (err) {
       console.error("Error fetching agents:", err);
     } finally {
@@ -55,7 +60,7 @@ export default function Employees() {
       icon: UserCheck,
     },
     {
-      title: "Avg Revenue Rep",
+      title: "Avg Revenue / Rep",
       value: `$${Math.round(statsData.avgRevenue).toLocaleString()}`,
       change: "Per Agent",
       icon: TrendingUp,
@@ -74,7 +79,7 @@ export default function Employees() {
       <div className="page-title">
         <div>
           <h1>Employees</h1>
-          <p>Manage employees and monitor their performance from live dataset</p>
+          <p>Manage sales team members and monitor performance metrics across offices</p>
         </div>
       </div>
 
@@ -105,7 +110,7 @@ export default function Employees() {
             <Search size={17} />
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder="Search employees by name, email or office..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -113,11 +118,15 @@ export default function Employees() {
 
           <select
             className="employees-filter"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
+            value={regionalOffice}
+            onChange={(e) => setRegionalOffice(e.target.value)}
           >
-            <option value="All">All Departments</option>
-            <option value="Sales">Sales</option>
+            <option value="All">All Regional Offices</option>
+            {regionalOffices.map((office) => (
+              <option key={office} value={office}>
+                {office} Office
+              </option>
+            ))}
           </select>
         </div>
 
@@ -132,7 +141,7 @@ export default function Employees() {
               <thead>
                 <tr>
                   <th>Employee</th>
-                  <th>Department</th>
+                  <th>Department & Office</th>
                   <th>Revenue</th>
                   <th>Performance</th>
                   <th>Status</th>
@@ -153,7 +162,14 @@ export default function Employees() {
                       </div>
                     </td>
                     <td>
-                      <span className="department-badge">{agent.department}</span>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                        <span className="department-badge">{agent.department}</span>
+                        {agent.regionalOffice && (
+                          <span style={{ fontSize: "0.75rem", color: "#64748b", display: "flex", alignItems: "center", gap: "3px" }}>
+                            <Building2 size={12} /> {agent.regionalOffice} Office
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td>
                       <strong>${Number(agent.totalRevenue).toLocaleString()}</strong>
@@ -179,7 +195,7 @@ export default function Employees() {
                 {agents.length === 0 && (
                   <tr>
                     <td colSpan="5" className="employees-empty">
-                      No employees found.
+                      No employees found matching selected filters.
                     </td>
                   </tr>
                 )}

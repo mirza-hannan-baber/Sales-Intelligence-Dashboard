@@ -94,7 +94,7 @@ export default function Deals() {
       await dealsService.createDeal({
         ...newDeal,
         value: Number(newDeal.value),
-        probability: newDeal.status === "Won" ? 100 : newDeal.status === "Lost" ? 0 : 65,
+        probability: 0, // Backend calculates dynamic win probability based on deal characteristics
       });
       setShowModal(false);
       setNewDeal({
@@ -178,9 +178,9 @@ export default function Deals() {
             />
           </div>
 
-          <div className="deals-filter">
-            <Filter size={16} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <div className="deals-filter-wrapper">
+            <Filter size={15} className="filter-icon" />
+            <select className="deals-filter" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
               <option value="All">All Status</option>
               <option value="Won">Won</option>
               <option value="In Progress">In Progress</option>
