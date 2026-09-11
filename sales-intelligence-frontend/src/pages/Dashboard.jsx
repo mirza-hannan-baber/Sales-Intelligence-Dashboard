@@ -18,23 +18,25 @@ import {
 } from "recharts";
 import { dashboardService } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useDataset } from "../context/DatasetContext";
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { selectedDatasetId } = useDataset();
   const [data, setData] = useState(null);
   const [months, setMonths] = useState(6);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData(months);
-  }, [months]);
+    fetchDashboardData(months, selectedDatasetId);
+  }, [months, selectedDatasetId]);
 
-  const fetchDashboardData = async (range = months) => {
+  const fetchDashboardData = async (range = months, datasetId = selectedDatasetId) => {
     setLoading(true);
     setError(null);
     try {
-      const kpiData = await dashboardService.getKpis({ months: range });
+      const kpiData = await dashboardService.getKpis({ months: range, datasetId });
       setData(kpiData);
     } catch (err) {
       setError("Failed to load live dashboard metrics from backend API.");

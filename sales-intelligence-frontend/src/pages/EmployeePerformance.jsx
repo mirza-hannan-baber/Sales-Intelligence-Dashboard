@@ -10,8 +10,10 @@ import {
 } from "recharts";
 import { Loader2, BrainCircuit } from "lucide-react";
 import { agentsService, predictionsService } from "../services/api";
+import { useDataset } from "../context/DatasetContext";
 
 export default function EmployeePerformance() {
+  const { selectedDatasetId } = useDataset();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,12 +24,12 @@ export default function EmployeePerformance() {
 
   useEffect(() => {
     fetchAgents();
-  }, []);
+  }, [selectedDatasetId]);
 
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const data = await agentsService.getAgents({});
+      const data = await agentsService.getAgents({ datasetId: selectedDatasetId });
       const items = data.items || [];
       setAgents(items);
       if (items.length > 0) {
@@ -49,10 +51,10 @@ export default function EmployeePerformance() {
     setPredicting(true);
     setError(null);
     try {
-      // Send only the employee identifier. The backend rebuilds that rep's
-      // quarterly feature vector from the CRM tables.
+      // Send employee identifier and selected dataset ID.
       const result = await predictionsService.predictEmployeePerformance({
         salesAgent: agent.name,
+        datasetId: selectedDatasetId,
       });
 
       if (result.error || result.detail) {

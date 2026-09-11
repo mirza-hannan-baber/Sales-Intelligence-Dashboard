@@ -24,10 +24,16 @@ namespace SalesIntelligence.Api.Controllers
             [FromQuery] string? product,
             [FromQuery] string? owner,
             [FromQuery] string? sector,
+            [FromQuery] int? datasetId = null,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50)
         {
             var query = _db.Deals.AsQueryable();
+
+            if (datasetId.HasValue && datasetId.Value > 0)
+            {
+                query = query.Where(d => d.DatasetId == datasetId.Value);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {

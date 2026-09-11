@@ -27,9 +27,9 @@ namespace SalesIntelligence.Api.Services
 
     public interface IEmployeeFeatureService
     {
-        Task<EmployeeYearlyFeatures?> GetYearlyFeaturesAsync(string salesAgent);
-        Task<EmployeeQuarterlyFeatures?> GetQuarterlyFeaturesAsync(string salesAgent);
-        Task<Dictionary<string, double>> GetWinRatePercentByAgentAsync();
+        Task<EmployeeYearlyFeatures?> GetYearlyFeaturesAsync(string salesAgent, int? datasetId = null);
+        Task<EmployeeQuarterlyFeatures?> GetQuarterlyFeaturesAsync(string salesAgent, int? datasetId = null);
+        Task<Dictionary<string, double>> GetWinRatePercentByAgentAsync(int? datasetId = null);
     }
 
     /// <summary>
@@ -75,17 +75,20 @@ namespace SalesIntelligence.Api.Services
             DateTime? CloseDate,
             decimal AccountRevenue,
             decimal ProposedValue,
+            decimal Value,
             int DurationDays);
 
-        private List<DealRow>? _deals;
-
-        private async Task<List<DealRow>> LoadAsync()
+        private async Task<List<DealRow>> LoadAsync(int? datasetId = null)
         {
-            return _deals ??= await _db.Deals
-                .AsNoTracking()
+            var query = _db.Deals.AsNoTracking();
+            if (datasetId.HasValue && datasetId.Value > 0)
+            {
+                query = query.Where(d => d.DatasetId == datasetId.Value);
+            }
+            return await query
                 .Select(d => new DealRow(
                     d.Owner, d.Status, d.CreatedDate, d.CloseDate,
-                    d.AccountRevenue, d.ProposedValue, d.DealDurationDays))
+                    d.AccountRevenue, d.ProposedValue, d.Value, d.DealDurationDays))
                 .ToListAsync();
         }
 
@@ -132,11 +135,11 @@ namespace SalesIntelligence.Api.Services
             return idx < 0 ? null : quarters[idx];
         }
 
-        public async Task<EmployeeYearlyFeatures?> GetYearlyFeaturesAsync(string salesAgent)
+        public async Task<EmployeeYearlyFeatures?> GetYearlyFeaturesAsync(string salesAgent, int? datasetId = null)
         {
             if (string.IsNullOrWhiteSpace(salesAgent)) return null;
 
-            var deals = await LoadAsync();
+            var deals = await LoadAsync(datasetId);
             var year = LatestCompleteYear(deals);
             if (year is null) return null;
 
@@ -147,13 +150,19 @@ namespace SalesIntelligence.Api.Services
                 return null;
             }
 
-            // revenue: account revenue on WON deals that CLOSED in the target year.
-            var revenue = mine
+            // revenue: sum of deal value on WON deals that CLOSED in the target year.
+            var yearlyWonDeals = mine
                 .Where(d => d.Status == "Won" && d.CloseDate.HasValue && d.CloseDate.Value.Year == year)
-                .Sum(d => (double)d.AccountRevenue);
+                .ToList();
+
+            var revenue = yearlyWonDeals.Count > 0
+                ? yearlyWonDeals.Sum(d => (double)(d.Value > 0 ? d.Value : d.ProposedValue))
+                : mine.Where(d => d.Status == "Won").Sum(d => (double)(d.Value > 0 ? d.Value : d.ProposedValue));
 
             // deals_worked / win_rate: all deals ENGAGED in the target year.
             var engaged = mine.Where(d => d.EngageDate.Year == year).ToList();
+            if (engaged.Count == 0) engaged = mine;
+
             var dealsWorked = engaged.Count;
             var winRate = dealsWorked > 0
                 ? engaged.Count(d => d.Status == "Won") / (double)dealsWorked
@@ -165,11 +174,11 @@ namespace SalesIntelligence.Api.Services
                 salesAgent, year.Value, revenue, yearsActive, dealsWorked, winRate);
         }
 
-        public async Task<EmployeeQuarterlyFeatures?> GetQuarterlyFeaturesAsync(string salesAgent)
+        public async Task<EmployeeQuarterlyFeatures?> GetQuarterlyFeaturesAsync(string salesAgent, int? datasetId = null)
         {
             if (string.IsNullOrWhiteSpace(salesAgent)) return null;
 
-            var deals = await LoadAsync();
+            var deals = await LoadAsync(datasetId);
             var quarter = LatestCompleteQuarter(deals);
             if (quarter is null) return null;
 
@@ -184,12 +193,14 @@ namespace SalesIntelligence.Api.Services
             bool InQuarter(DateTime d) => d.Year == year && (d.Month - 1) / 3 + 1 == q;
 
             var engaged = mine.Where(d => InQuarter(d.EngageDate)).ToList();
+            if (engaged.Count == 0) engaged = mine;
+
             var dealsWorked = engaged.Count;
             var winRate = dealsWorked > 0
                 ? engaged.Count(d => d.Status == "Won") / (double)dealsWorked
                 : 0.0;
             var avgDealSize = dealsWorked > 0
-                ? engaged.Average(d => (double)d.ProposedValue)
+                ? engaged.Average(d => (double)(d.ProposedValue > 0 ? d.ProposedValue : d.Value))
                 : 0.0;
 
             // Open deals had a null cycle length during training and were skipped.
@@ -198,18 +209,22 @@ namespace SalesIntelligence.Api.Services
                 ? closedInQuarter.Average(d => (double)d.DurationDays)
                 : 0.0;
 
-            var revenue = mine
+            var quarterlyWonDeals = mine
                 .Where(d => d.Status == "Won" && d.CloseDate.HasValue && InQuarter(d.CloseDate.Value))
-                .Sum(d => (double)d.AccountRevenue);
+                .ToList();
+
+            var revenue = quarterlyWonDeals.Count > 0
+                ? quarterlyWonDeals.Sum(d => (double)(d.Value > 0 ? d.Value : d.ProposedValue))
+                : mine.Where(d => d.Status == "Won").Sum(d => (double)(d.Value > 0 ? d.Value : d.ProposedValue));
 
             return new EmployeeQuarterlyFeatures(
                 salesAgent, $"{year}Q{q}", dealsWorked, winRate, avgDealSize, avgCycleDays, revenue);
         }
 
         /// <summary>Real win rate per rep, as a 0-100 percentage, over every deal on record.</summary>
-        public async Task<Dictionary<string, double>> GetWinRatePercentByAgentAsync()
+        public async Task<Dictionary<string, double>> GetWinRatePercentByAgentAsync(int? datasetId = null)
         {
-            var deals = await LoadAsync();
+            var deals = await LoadAsync(datasetId);
             return deals
                 .Where(d => !string.IsNullOrWhiteSpace(d.Owner))
                 .GroupBy(d => d.Owner)

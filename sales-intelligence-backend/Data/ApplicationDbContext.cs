@@ -10,6 +10,7 @@ namespace SalesIntelligence.Api.Data
         {
         }
 
+        public DbSet<Dataset> Datasets => Set<Dataset>();
         public DbSet<Deal> Deals => Set<Deal>();
         public DbSet<Account> Accounts => Set<Account>();
         public DbSet<Agent> Agents => Set<Agent>();
@@ -20,8 +21,11 @@ namespace SalesIntelligence.Api.Data
             base.OnModelCreating(builder);
 
             builder.Entity<Deal>().HasIndex(d => d.OpportunityId);
+            builder.Entity<Deal>().HasIndex(d => d.DatasetId);
             builder.Entity<Account>().HasIndex(a => a.AccountId);
+            builder.Entity<Account>().HasIndex(a => a.DatasetId);
             builder.Entity<Agent>().HasIndex(a => a.Name);
+            builder.Entity<Agent>().HasIndex(a => a.DatasetId);
         }
     }
 }

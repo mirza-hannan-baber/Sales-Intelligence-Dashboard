@@ -16,8 +16,8 @@ namespace SalesIntelligence.Api.Services
         private readonly ILogger<GroqAgentService> _logger;
 
         private const string GroqEndpoint = "https://api.groq.com/openai/v1/chat/completions";
-        private const string PrimaryModel = "llama-3.3-70b-versatile";
-        private const string FallbackModel = "llama-3.1-8b-instant";
+        private const string PrimaryModel = "openai/gpt-oss-120b";
+        private const string FallbackModel = "openai/gpt-oss-20b";
 
         public GroqAgentService(
             HttpClient httpClient,
@@ -33,7 +33,7 @@ namespace SalesIntelligence.Api.Services
             _logger = logger;
         }
 
-        public async Task<AgentAskResponse> AskAsync(string question, CancellationToken cancellationToken = default)
+        public async Task<AgentAskResponse> AskAsync(string question, int? datasetId = null, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(question))
             {
@@ -69,11 +69,11 @@ namespace SalesIntelligence.Api.Services
 
             if (IsAdvisoryQuestion(lowerQ))
             {
-                return await HandleAdvisoryPathAsync(question, primaryKey, backupKey, cancellationToken);
+                return await HandleAdvisoryPathAsync(question, datasetId, primaryKey, backupKey, cancellationToken);
             }
             else
             {
-                return await HandleDirectSqlPathAsync(question, primaryKey, backupKey, cancellationToken);
+                return await HandleDirectSqlPathAsync(question, datasetId, primaryKey, backupKey, cancellationToken);
             }
         }
 
@@ -100,33 +100,37 @@ namespace SalesIntelligence.Api.Services
 
         private async Task<AgentAskResponse> HandleAdvisoryPathAsync(
             string question,
+            int? datasetId,
             string primaryKey,
             string backupKey,
             CancellationToken cancellationToken)
         {
+            string dsWhere = (datasetId.HasValue && datasetId.Value > 0) ? $" AND DatasetId = {datasetId.Value}" : "";
+            string dsWhereOnly = (datasetId.HasValue && datasetId.Value > 0) ? $" WHERE DatasetId = {datasetId.Value}" : "";
+
             // Multi-analysis aggregate queries across CRM dimensions
             var queries = new (string Name, string Sql)[]
             {
                 ("Win Rate by Sector",
-                 "SELECT Sector, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost') GROUP BY Sector ORDER BY WinRatePercent DESC"),
+                 $"SELECT Sector, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost'){dsWhere} GROUP BY Sector ORDER BY WinRatePercent DESC"),
 
                 ("Win Rate by Region",
-                 "SELECT Region, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost') AND Region IS NOT NULL GROUP BY Region ORDER BY WinRatePercent DESC"),
+                 $"SELECT Region, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost') AND Region IS NOT NULL{dsWhere} GROUP BY Region ORDER BY WinRatePercent DESC"),
 
                 ("Win Rate by Product",
-                 "SELECT Product, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost') GROUP BY Product ORDER BY WinRatePercent DESC"),
+                 $"SELECT Product, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost'){dsWhere} GROUP BY Product ORDER BY WinRatePercent DESC"),
 
                 ("Win Rate by Cycle-Length Bucket",
-                 "SELECT CASE WHEN DealDurationDays <= 30 THEN '0-30 days' WHEN DealDurationDays <= 60 THEN '31-60 days' WHEN DealDurationDays <= 90 THEN '61-90 days' ELSE '90+ days' END as CycleBucket, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost') GROUP BY CycleBucket ORDER BY WinRatePercent DESC"),
+                 $"SELECT CASE WHEN DealDurationDays <= 30 THEN '0-30 days' WHEN DealDurationDays <= 60 THEN '31-60 days' WHEN DealDurationDays <= 90 THEN '61-90 days' ELSE '90+ days' END as CycleBucket, COUNT(*) as TotalDeals, SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) as WonDeals, ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1) as WinRatePercent FROM Deals WHERE Status IN ('Won', 'Lost'){dsWhere} GROUP BY CycleBucket ORDER BY WinRatePercent DESC"),
 
                 ("Top Reps by Revenue",
-                 "SELECT Owner, SUM(Value) as TotalRevenue, COUNT(*) as WonDeals FROM Deals WHERE Status = 'Won' GROUP BY Owner ORDER BY TotalRevenue DESC LIMIT 5"),
+                 $"SELECT Owner, SUM(Value) as TotalRevenue, COUNT(*) as WonDeals FROM Deals WHERE Status = 'Won'{dsWhere} GROUP BY Owner ORDER BY TotalRevenue DESC LIMIT 5"),
 
                 ("Monthly Revenue Trend (Last 12 Months)",
-                 "SELECT strftime('%Y-%m', COALESCE(CloseDate, CreatedDate)) as Month, SUM(Value) as MonthlyRevenue FROM Deals WHERE Status = 'Won' GROUP BY Month ORDER BY Month DESC LIMIT 12"),
+                 $"SELECT strftime('%Y-%m', COALESCE(CloseDate, CreatedDate)) as Month, SUM(Value) as MonthlyRevenue FROM Deals WHERE Status = 'Won'{dsWhere} GROUP BY Month ORDER BY Month DESC LIMIT 12"),
 
                 ("Average Deal Size by Sector",
-                 "SELECT Sector, ROUND(AVG(Value), 2) as AvgDealSize FROM Deals WHERE Status = 'Won' GROUP BY Sector ORDER BY AvgDealSize DESC")
+                 $"SELECT Sector, ROUND(AVG(Value), 2) as AvgDealSize FROM Deals WHERE Status = 'Won'{dsWhere} GROUP BY Sector ORDER BY AvgDealSize DESC")
             };
 
             var aggregateResults = new StringBuilder();
@@ -175,6 +179,7 @@ namespace SalesIntelligence.Api.Services
 
         private async Task<AgentAskResponse> HandleDirectSqlPathAsync(
             string question,
+            int? datasetId,
             string primaryKey,
             string backupKey,
             CancellationToken cancellationToken)
@@ -189,6 +194,10 @@ namespace SalesIntelligence.Api.Services
                 schemaText = _schemaService.GetPromptText();
             }
 
+            string datasetMandate = (datasetId.HasValue && datasetId.Value > 0)
+                ? $"\n7. DATASET FILTER (CRITICAL MANDATE): The user is viewing dataset ID = {datasetId.Value}. You MUST include `DatasetId = {datasetId.Value}` in the WHERE clause for Deals, Agents, or Accounts."
+                : "";
+
             var systemPrompt =
                 "You are a database SQL expert for a SQLite CRM database.\n" +
                 $"{schemaText}\n\n" +
@@ -199,7 +208,8 @@ namespace SalesIntelligence.Api.Services
                 "3. Reference real table names: Deals, Agents, or Accounts.\n" +
                 "4. Make sure column names match the schema exactly (e.g. Value, Owner, Sector, Status, CreatedDate, CloseDate).\n" +
                 "5. NUMERIC CASTING MANDATE: In SQLite, TotalRevenue, Value, ProposedValue, Revenue, AccountRevenue are TEXT. You MUST use CAST(col AS REAL) when doing numeric filtering (e.g. CAST(TotalRevenue AS REAL) > 1000000), aggregations (SUM(CAST(Value AS REAL))), or sorting.\n" +
-                "6. FLOAT DIVISION MANDATE (CRITICAL): In SQLite, dividing integer counts returns 0 (e.g. 15 / 100 = 0). When calculating win rates, percentages, or ratios, ALWAYS multiply by 100.0 first or cast to REAL: e.g. ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1). NEVER write `SUM(...) / COUNT(*) * 100` because integer division will evaluate to 0 across all rows!";
+                "6. FLOAT DIVISION MANDATE (CRITICAL): In SQLite, dividing integer counts returns 0 (e.g. 15 / 100 = 0). When calculating win rates, percentages, or ratios, ALWAYS multiply by 100.0 first or cast to REAL: e.g. ROUND(100.0 * SUM(CASE WHEN Status = 'Won' THEN 1 ELSE 0 END) / NULLIF(SUM(CASE WHEN Status IN ('Won', 'Lost') THEN 1 ELSE 0 END), 0), 1). NEVER write `SUM(...) / COUNT(*) * 100` because integer division will evaluate to 0 across all rows!" +
+                datasetMandate;
 
             var messages = new List<GroqMessage>
             {
@@ -266,7 +276,8 @@ namespace SalesIntelligence.Api.Services
                 "RULES:\n" +
                 "1. Direct Answer: Answer the user's specific question clearly and concisely in plain English.\n" +
                 "2. Conceptual Questions: If the user asks which field a metric depends on (e.g., 'Win rates depend on which field?'), state clearly that Win Rate depends on the 'Status' field (calculating the percentage of Won deals out of total closed Won and Lost deals).\n" +
-                "3. Accuracy: Rely strictly on the query result numbers for stats — never invent numbers or print raw JSON/unformatted lists of row data.";
+                "3. Accuracy: Rely strictly on the query result numbers for stats — never invent numbers or print raw JSON/unformatted lists of row data.\n" +
+                "4. Concise Tone: Give a focused, direct answer to the user's question. Do not append canned or repetitive closing offers.";
 
             var narrationUserPrompt =
                 $"Question: {question}\n" +

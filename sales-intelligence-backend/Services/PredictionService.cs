@@ -55,7 +55,7 @@ namespace SalesIntelligence.Api.Services
                 month = req.Month,
                 quarter = req.QuarterNumber
             };
-            return await CallMlServiceAsync("/predict/company-revenue", payload, "Company Revenue Forecast", username);
+            return await CallMlServiceAsync("/predict/company-revenue", payload, "Company Revenue Forecast", username );
         }
 
         public async Task<object> PredictWinRateAsync(WinRatePredictRequest req, string username)
@@ -85,7 +85,7 @@ namespace SalesIntelligence.Api.Services
             // The database is the source of truth for this rep's features. Anything the
             // browser sent is only a fallback, so a stale or partial client payload can
             // never make two different reps score identically.
-            var f = await _features.GetQuarterlyFeaturesAsync(req.SalesAgent);
+            var f = await _features.GetQuarterlyFeaturesAsync(req.SalesAgent, req.DatasetId);
 
             var dealsWorked = f?.DealsWorked ?? (double?)req.DealsWorked ?? req.TotalDealsLag1;
             var winRate = f?.WinRate ?? ToFraction(req.WinRate ?? req.WinRateLag1);
@@ -125,7 +125,7 @@ namespace SalesIntelligence.Api.Services
         {
             // Same contract as above: look the rep up by name and rebuild the exact
             // four features the yearly model was trained on, in training order.
-            var f = await _features.GetYearlyFeaturesAsync(req.SalesAgent);
+            var f = await _features.GetYearlyFeaturesAsync(req.SalesAgent, req.DatasetId);
 
             var revenue = f?.Revenue ?? (double?)req.Revenue ?? req.RollingMean12 * 12f;
             var yearsActive = f?.YearsActive ?? (double?)req.YearsActive ?? 2d;

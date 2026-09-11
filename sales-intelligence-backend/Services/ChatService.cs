@@ -53,6 +53,18 @@ namespace SalesIntelligence.Api.Services
             // Correlation / factors — existing deterministic analysis
             if (DataQuestionParser.IsCorrelationQuestion(lower))
             {
+                try
+                {
+                    if(DataQuestionParser.IsRecommendationQuestion(lower) || IsStrategicQuestion(lower))
+                    {
+                        return await HandleRecommendationAsync(userMsg, history);
+                    }
+                    else{}
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Correlation analysis failed, falling back to SQL agent.");
+                }
                 return await HandleCorrelationAsync(userMsg, history);
             }
 
@@ -61,6 +73,7 @@ namespace SalesIntelligence.Api.Services
             {
                 return await HandleRecommendationAsync(userMsg, history);
             }
+
 
             // Primary path: dynamic SQL agent with chat history
             try

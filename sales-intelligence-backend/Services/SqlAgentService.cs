@@ -28,7 +28,7 @@ namespace SalesIntelligence.Api.Services
         {
             try
             {
-                var groqResp = await _groqAgent.AskAsync(question, cancellationToken);
+                var groqResp = await _groqAgent.AskAsync(question, cancellationToken: cancellationToken);
                 return new SqlAgentResponse
                 {
                     Answer = groqResp.Answer,

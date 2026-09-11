@@ -71,6 +71,18 @@ DATASET_PATH = os.path.join(_WORKSPACE_ROOT, _cfg("DATASET_PATH", "dataset/clean
 def load_pkl(config_key: str, default_filename: str):
     """Safely load a joblib/pickle artifact named in the config. Returns None on failure."""
     filename = _cfg(config_key, default_filename)
+    
+    # Check specific subfolder (e.g., dataset/Lag Revenue/) first if applicable
+    if "lag_revenue" in default_filename.lower():
+        subfolder_filepath = os.path.join(MODEL_DIR, "Lag Revenue", default_filename)
+        if os.path.exists(subfolder_filepath):
+            try:
+                obj = joblib.load(subfolder_filepath)
+                print(f"[ml-service] Loaded {default_filename} from Lag Revenue subfolder")
+                return obj
+            except Exception as exc:
+                print(f"[ml-service] Error loading {subfolder_filepath}: {exc}")
+
     filepath = os.path.join(MODEL_DIR, filename)
     if not os.path.exists(filepath):
         print(f"[ml-service] MISSING artifact: {filepath}")
@@ -441,6 +453,9 @@ def predict_win_rate(req: WinRateRequest):
 # ---------------------------------------------------------------------------
 # Employee performance (quarterly model -> next-quarter revenue)
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Employee performance (quarterly model -> next-quarter revenue)
+# ---------------------------------------------------------------------------
 @app.post("/predict/employee-performance")
 def predict_employee_performance(req: EmployeePerformanceRequest):
     if employee_quarterly_model is None:
@@ -463,7 +478,7 @@ def predict_employee_performance(req: EmployeePerformanceRequest):
     revenue = req.revenue
     if revenue is None:
         revenue = req.total_revenue_lag1 if req.total_revenue_lag1 is not None else req.revenue_rolling_3
-    revenue = _num(revenue, 75000.0)
+    revenue = _num(revenue, 0.0)
 
     feature_values = {
         "deals_worked": deals_worked,
@@ -474,11 +489,24 @@ def predict_employee_performance(req: EmployeePerformanceRequest):
     }
     _log_prediction("employee_quarterly", req.sales_agent, feature_values)
 
+    # Scale revenue input to model training scale (~$4.8M mean quarterly)
+    # to evaluate tree splits across features, then extract the ML growth multiplier.
+    MODEL_QUARTERLY_BASE_REVENUE = 4800000.0
     input_df = pd.DataFrame(
-        [[feature_values[f] for f in employee_quarterly_features]],
+        [[
+            MODEL_QUARTERLY_BASE_REVENUE if f == "revenue" else feature_values[f]
+            for f in employee_quarterly_features
+        ]],
         columns=list(employee_quarterly_features),
     )
-    next_quarter_revenue = float(employee_quarterly_model.predict(input_df)[0])
+    predicted_q_raw = float(employee_quarterly_model.predict(input_df)[0])
+    q_growth_multiplier = predicted_q_raw / MODEL_QUARTERLY_BASE_REVENUE
+
+    effective_base_q_revenue = revenue if revenue > 0 else (deals_worked * avg_deal_size * win_rate)
+    if effective_base_q_revenue <= 0:
+        effective_base_q_revenue = 7500.0
+
+    next_quarter_revenue = float(effective_base_q_revenue * q_growth_multiplier)
 
     # Backward-compatible performance score: a genuine 0-100 percentage derived
     # from the rep's win rate (NOT the raw revenue). See MODEL_CONFIGURATION.md.
@@ -511,7 +539,7 @@ def predict_employee_revenue(req: EmployeeRevenueRequest):
             revenue = _num(req.rolling_mean_12, 0.0) * 12.0
         elif req.lag_1 is not None:
             revenue = _num(req.lag_1, 0.0) * 12.0
-    revenue = _num(revenue, 600000.0)
+    revenue = _num(revenue, 0.0)
 
     years_active = _num(req.years_active, 2.0)
     deals_worked = _num(req.deals_worked, 40.0)
@@ -525,11 +553,24 @@ def predict_employee_revenue(req: EmployeeRevenueRequest):
     }
     _log_prediction("employee_yearly", req.sales_agent, feature_values)
 
+    # Scale revenue input to model training scale (~$20.0M mean annual)
+    # to evaluate tree splits across features, then extract the ML growth multiplier.
+    MODEL_YEARLY_BASE_REVENUE = 20000000.0
     input_df = pd.DataFrame(
-        [[feature_values[f] for f in employee_yearly_features]],
+        [[
+            MODEL_YEARLY_BASE_REVENUE if f == "revenue" else feature_values[f]
+            for f in employee_yearly_features
+        ]],
         columns=list(employee_yearly_features),
     )
-    predicted_revenue = float(employee_yearly_model.predict(input_df)[0])
+    predicted_raw = float(employee_yearly_model.predict(input_df)[0])
+    growth_multiplier = predicted_raw / MODEL_YEARLY_BASE_REVENUE
+
+    effective_base_revenue = revenue if revenue > 0 else (deals_worked * 8000.0 * win_rate)
+    if effective_base_revenue <= 0:
+        effective_base_revenue = 25000.0
+
+    predicted_revenue = float(effective_base_revenue * growth_multiplier)
 
     return {
         "prediction_type": "employee_revenue",

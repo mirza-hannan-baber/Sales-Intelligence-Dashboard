@@ -20,9 +20,13 @@ namespace SalesIntelligence.Api.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetAgents([FromQuery] string? search, [FromQuery] string? department, [FromQuery] string? regionalOffice)
+        public async Task<IActionResult> GetAgents([FromQuery] string? search, [FromQuery] string? department, [FromQuery] string? regionalOffice, [FromQuery] int? datasetId = null)
         {
             var query = _db.Agents.AsQueryable();
+            if (datasetId.HasValue && datasetId.Value > 0)
+            {
+                query = query.Where(a => a.DatasetId == datasetId.Value);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -46,7 +50,7 @@ namespace SalesIntelligence.Api.Controllers
 
             // Recompute the performance score live from the deal ledger so the table
             // never serves a stale seeded value.
-            var winRates = await _features.GetWinRatePercentByAgentAsync();
+            var winRates = await _features.GetWinRatePercentByAgentAsync(datasetId);
             foreach (var a in agents)
             {
                 if (winRates.TryGetValue(a.Name, out var wr))
@@ -76,12 +80,17 @@ namespace SalesIntelligence.Api.Controllers
         }
 
         [HttpGet("{id:int}/performance")]
-        public async Task<IActionResult> GetAgentPerformance(int id)
+        public async Task<IActionResult> GetAgentPerformance(int id, [FromQuery] int? datasetId = null)
         {
             var agent = await _db.Agents.FindAsync(id);
             if (agent == null) return NotFound();
 
-            var deals = await _db.Deals.Where(d => d.Owner == agent.Name).ToListAsync();
+            var dealsQuery = _db.Deals.Where(d => d.Owner == agent.Name);
+            if (datasetId.HasValue && datasetId.Value > 0)
+            {
+                dealsQuery = dealsQuery.Where(d => d.DatasetId == datasetId.Value);
+            }
+            var deals = await dealsQuery.ToListAsync();
             var won = deals.Where(d => d.Status == "Won").ToList();
             var closed = deals.Where(d => d.Status is "Won" or "Lost").ToList();
 
@@ -164,9 +173,6 @@ namespace SalesIntelligence.Api.Controllers
                 ? Math.Max(0.0, end.Year - deals.Min(d => d.CreatedDate).Year)
                 : 0.0;
 
-            // Training-consistent model inputs for the latest COMPLETE period. These are
-            // what the prediction endpoints actually use; the legacy lag fields below are
-            // kept only so existing UI panels keep rendering.
             var yearly = await _features.GetYearlyFeaturesAsync(agent.Name);
             var quarterly = await _features.GetQuarterlyFeaturesAsync(agent.Name);
 

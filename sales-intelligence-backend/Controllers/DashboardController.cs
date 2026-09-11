@@ -33,11 +33,17 @@ namespace SalesIntelligence.Api.Controllers
         }
 
         [HttpGet("kpis")]
-        public async Task<IActionResult> GetKpis([FromQuery] int months = 6)
+        public async Task<IActionResult> GetKpis([FromQuery] int months = 6, [FromQuery] int? datasetId = null)
         {
             months = months is 12 or 6 ? months : 6;
 
-            var deals = await _db.Deals.AsNoTracking().ToListAsync();
+            var query = _db.Deals.AsNoTracking();
+            if (datasetId.HasValue && datasetId.Value > 0)
+            {
+                query = query.Where(d => d.DatasetId == datasetId.Value);
+            }
+
+            var deals = await query.ToListAsync();
             var wonDeals = deals.Where(d => d.Status == "Won").ToList();
             var closedDeals = deals.Where(d => d.Status is "Won" or "Lost").ToList();
             var openDeals = deals.Where(d => d.Status is "In Progress" or "Negotiation" or "At Risk").ToList();

@@ -9,8 +9,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { dealsService } from "../services/api";
+import { useDataset } from "../context/DatasetContext";
 
 export default function Deals() {
+  const { selectedDatasetId } = useDataset();
   const [deals, setDeals] = useState([]);
   const [stats, setStats] = useState({
     totalPipeline: "$0",
@@ -50,11 +52,11 @@ export default function Deals() {
 
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, statusFilter, productFilter, ownerFilter, sectorFilter]);
+  }, [debouncedSearch, statusFilter, productFilter, ownerFilter, sectorFilter, selectedDatasetId]);
 
   useEffect(() => {
     fetchDeals();
-  }, [debouncedSearch, statusFilter, productFilter, ownerFilter, sectorFilter, page]);
+  }, [debouncedSearch, statusFilter, productFilter, ownerFilter, sectorFilter, page, selectedDatasetId]);
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -65,6 +67,7 @@ export default function Deals() {
         product: productFilter,
         owner: ownerFilter,
         sector: sectorFilter,
+        datasetId: selectedDatasetId,
         page,
         pageSize,
       });

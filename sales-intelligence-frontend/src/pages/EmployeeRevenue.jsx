@@ -17,8 +17,10 @@ import {
   Tooltip,
 } from "recharts";
 import { agentsService, predictionsService } from "../services/api";
+import { useDataset } from "../context/DatasetContext";
 
 export default function EmployeeRevenue() {
+  const { selectedDatasetId } = useDataset();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAgentId, setSelectedAgentId] = useState("");
@@ -28,12 +30,12 @@ export default function EmployeeRevenue() {
 
   useEffect(() => {
     fetchAgents();
-  }, []);
+  }, [selectedDatasetId]);
 
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      const data = await agentsService.getAgents({});
+      const data = await agentsService.getAgents({ datasetId: selectedDatasetId });
       const items = data.items || [];
       setAgents(items);
       if (items.length > 0) {
@@ -55,11 +57,9 @@ export default function EmployeeRevenue() {
     setPredicting(true);
     setError(null);
     try {
-      // Send only the employee identifier. The backend rebuilds that rep's feature
-      // vector from the CRM tables, so the request can never carry another rep's
-      // numbers or a stale client-side copy of them.
       const result = await predictionsService.predictEmployeeRevenue({
         salesAgent: agent.name,
+        datasetId: selectedDatasetId,
       });
 
       if (result.error || result.detail) {

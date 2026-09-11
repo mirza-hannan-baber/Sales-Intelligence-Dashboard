@@ -78,14 +78,35 @@ export const accountsService = {
   },
 };
 
+
+// Datasets Service
+export const datasetsService = {
+  getDatasets: async (params = {}) => {
+    const res = await api.get('/datasets', { params });
+    return res.data;
+  },
+  uploadDataset: async (formData) => {
+    const res = await api.post('/datasets/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
+  },
+  deleteDataset: async (id, params = {}) => {
+    const res = await api.delete(`/datasets/${id}`, { params });
+    return res.data;
+  },
+};
+
 // Agents Service
 export const agentsService = {
   getAgents: async (params) => {
     const res = await api.get('/agents', { params });
     return res.data;
   },
-  getAgentPerformance: async (id) => {
-    const res = await api.get(`/agents/${id}/performance`);
+  getAgentPerformance: async (id, params = {}) => {
+    const res = await api.get(`/agents/${id}/performance`, { params });
     return res.data;
   },
 };
@@ -136,16 +157,16 @@ export const userService = {
 
 // Agent Service (Groq SQL Agent)
 export const agentService = {
-  ask: async (question) => {
-    const res = await api.post('/agent/ask', { question });
+  ask: async (question, datasetId = null) => {
+    const res = await api.post('/agent/ask', { question, datasetId });
     return res.data;
   },
 };
 
 // Chat Service
 export const chatService = {
-  sendMessage: async (message) => {
-    const res = await api.post('/agent/ask', { question: message });
+  sendMessage: async (message, datasetId = null) => {
+    const res = await api.post('/agent/ask', { question: message, datasetId });
     return res.data;
   },
 };

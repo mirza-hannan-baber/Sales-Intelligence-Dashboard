@@ -31,7 +31,7 @@ namespace SalesIntelligence.Api.Controllers
 
             try
             {
-                var response = await _groqAgentService.AskAsync(request.Question, cancellationToken);
+                var response = await _groqAgentService.AskAsync(request.Question, request.DatasetId, cancellationToken);
                 return Ok(response);
             }
             catch (Exception ex)

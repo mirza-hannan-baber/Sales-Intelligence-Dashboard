@@ -1,7 +1,9 @@
 import { useState, useCallback } from 'react';
 import { chatService } from '../services/api';
+import { useDataset } from '../context/DatasetContext';
 
 export function useChat() {
+  const { selectedDatasetId } = useDataset();
   const [messages, setMessages] = useState([
     {
       id: 'welcome-msg',
@@ -33,13 +35,13 @@ export function useChat() {
     setError(null);
 
     try {
-      const response = await chatService.sendMessage(userText);
+      const response = await chatService.sendMessage(userText, selectedDatasetId);
       const aiMessage = {
         id: `ai-${Date.now()}`,
         role: 'assistant',
         content: response.answer || 'Here are the insights from your sales data.',
         type: 'text',
-        sqlUsed: response.sql_used || '',
+        sqlUsed: response.sqlUsed || response.sql_used || '',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
 
@@ -60,7 +62,7 @@ export function useChat() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedDatasetId]);
 
   const toggleOpen = useCallback(() => {
     setIsOpen((prev) => !prev);

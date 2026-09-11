@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SalesIntelligence.Api.Models;
 using SalesIntelligence.Api.Utilities;
 
@@ -15,6 +16,74 @@ namespace SalesIntelligence.Api.Data
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
             await context.Database.EnsureCreatedAsync();
+
+            // Ensure existing SQLite database file is migrated with Datasets table and DatasetId columns
+            try
+            {
+                await context.Database.ExecuteSqlRawAsync(@"
+                    CREATE TABLE IF NOT EXISTS ""Datasets"" (
+                        ""Id"" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        ""Name"" TEXT NOT NULL,
+                        ""FileName"" TEXT NOT NULL,
+                        ""UploadedByEmail"" TEXT NULL,
+                        ""UploadedAt"" TEXT NOT NULL,
+                        ""RowCount"" INTEGER NOT NULL,
+                        ""DealsCount"" INTEGER NOT NULL,
+                        ""IsActive"" INTEGER NOT NULL
+                    );
+                ");
+
+                var conn = context.Database.GetDbConnection();
+                if (conn.State != System.Data.ConnectionState.Open) await conn.OpenAsync();
+
+                // Check Deals table for DatasetId
+                bool hasDatasetId = false;
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info('Deals');";
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        if (string.Equals(reader.GetString(1), "DatasetId", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasDatasetId = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasDatasetId)
+                {
+                    await context.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Deals"" ADD COLUMN ""DatasetId"" INTEGER NOT NULL DEFAULT 1;");
+                    await context.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Accounts"" ADD COLUMN ""DatasetId"" INTEGER NOT NULL DEFAULT 1;");
+                    await context.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Agents"" ADD COLUMN ""DatasetId"" INTEGER NOT NULL DEFAULT 1;");
+                }
+
+                // Check Datasets table for UploadedByEmail
+                bool hasUploadedByEmail = false;
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info('Datasets');";
+                    using var reader = await cmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        if (string.Equals(reader.GetString(1), "UploadedByEmail", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasUploadedByEmail = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasUploadedByEmail)
+                {
+                    await context.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Datasets"" ADD COLUMN ""UploadedByEmail"" TEXT NULL;");
+                }
+            }
+            catch
+            {
+                // Ignore
+            }
 
             // 1. Seed Roles
             string[] roles = new[] { "Superadmin", "User" };
@@ -68,7 +137,24 @@ namespace SalesIntelligence.Api.Data
                 }
             }
 
-            // 4. Seed Deals, Accounts, and Agents from CSV if empty
+            // 4. Seed Datasets, Deals, Accounts, and Agents from CSV if empty
+            if (!context.Datasets.Any())
+            {
+                var defaultDataset = new Dataset
+                {
+                    Name = "Default Dataset (sales_pipeline.csv)",
+                    FileName = "sales_pipeline.csv",
+                    UploadedAt = DateTime.UtcNow,
+                    RowCount = 0,
+                    DealsCount = 0,
+                    IsActive = true
+                };
+                context.Datasets.Add(defaultDataset);
+                await context.SaveChangesAsync();
+            }
+
+            var activeDataset = await context.Datasets.OrderBy(d => d.Id).FirstOrDefaultAsync() ?? new Dataset { Id = 1, Name = "Default Dataset" };
+
             if (!context.Deals.Any())
             {
                 // Dataset location comes from the central model-config.env (relative to workspace root).
@@ -128,6 +214,7 @@ namespace SalesIntelligence.Api.Data
                                 {
                                     agentMap[agentName] = new Agent
                                     {
+                                        DatasetId = activeDataset.Id,
                                         Name = agentName,
                                         Email = $"{agentName.ToLower().Replace(" ", ".")}@company.com",
                                         Department = "Sales",
@@ -152,6 +239,7 @@ namespace SalesIntelligence.Api.Data
                                 {
                                     accountMap[accName] = new Account
                                     {
+                                        DatasetId = activeDataset.Id,
                                         AccountId = $"ACC_{accountMap.Count + 1:D4}",
                                         Name = accName,
                                         Sector = sector,
@@ -191,6 +279,7 @@ namespace SalesIntelligence.Api.Data
 
                             dealsList.Add(new Deal
                             {
+                                DatasetId = activeDataset.Id,
                                 OpportunityId = oppId,
                                 Name = $"{product} Deal - {accName}",
                                 Company = accName,
@@ -212,10 +301,6 @@ namespace SalesIntelligence.Api.Data
                         }
 
                         // Calculate Win rates and Scores for Agents.
-                        // PerformanceScore is the rep's real win rate. The previous formula
-                        // (win_rate * 0.7 + bonus, floored at 60) collapsed to exactly 60 for
-                        // every rep, because win rates in this CRM sit around 35-40% and the
-                        // floor always won.
                         foreach (var ag in agentMap.Values)
                         {
                             ag.WinRate = ag.TotalDeals > 0 ? Math.Round((double)ag.WonDeals / ag.TotalDeals * 100, 1) : 0.0;
@@ -236,6 +321,12 @@ namespace SalesIntelligence.Api.Data
                             await context.SaveChangesAsync();
                             context.ChangeTracker.Clear();
                         }
+
+                        // Update dataset counts
+                        activeDataset.RowCount = lines.Length - 1;
+                        activeDataset.DealsCount = dealsList.Count;
+                        context.Datasets.Update(activeDataset);
+                        await context.SaveChangesAsync();
                     }
                 }
             }

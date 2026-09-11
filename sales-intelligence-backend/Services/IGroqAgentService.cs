@@ -4,6 +4,6 @@ namespace SalesIntelligence.Api.Services
 {
     public interface IGroqAgentService
     {
-        Task<AgentAskResponse> AskAsync(string question, CancellationToken cancellationToken = default);
+        Task<AgentAskResponse> AskAsync(string question, int? datasetId = null, CancellationToken cancellationToken = default);
     }
 }

@@ -12,9 +12,22 @@ namespace SalesIntelligence.Api.Models
         public DateTime? RefreshTokenExpiryTime { get; set; }
     }
 
+    public class Dataset
+    {
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string FileName { get; set; } = string.Empty;
+        public string? UploadedByEmail { get; set; }
+        public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
+        public int RowCount { get; set; }
+        public int DealsCount { get; set; }
+        public bool IsActive { get; set; } = true;
+    }
+
     public class Deal
     {
         public int Id { get; set; }
+        public int DatasetId { get; set; } = 1;
         public string OpportunityId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Company { get; set; } = string.Empty;
@@ -39,6 +52,7 @@ namespace SalesIntelligence.Api.Models
     public class Account
     {
         public int Id { get; set; }
+        public int DatasetId { get; set; } = 1;
         public string AccountId { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Sector { get; set; } = string.Empty;
@@ -52,6 +66,7 @@ namespace SalesIntelligence.Api.Models
     public class Agent
     {
         public int Id { get; set; }
+        public int DatasetId { get; set; } = 1;
         public string Name { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Department { get; set; } = "Sales";

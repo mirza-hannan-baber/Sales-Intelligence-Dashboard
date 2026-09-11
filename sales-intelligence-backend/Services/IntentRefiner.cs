@@ -4,7 +4,7 @@ using SalesIntelligence.Api.Models;
 namespace SalesIntelligence.Api.Services
 {
     /// <summary>
-    /// Deterministic overlay on top of Ollama intent classification.
+    /// Deterministic overlay on top of LLM intent classification.
     /// Prevents the LLM from routing numerical questions to the wrong aggregation.
     /// </summary>
     public static class IntentRefiner

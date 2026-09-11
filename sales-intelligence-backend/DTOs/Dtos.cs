@@ -81,6 +81,7 @@ namespace SalesIntelligence.Api.DTOs
     public class EmployeePerformancePredictRequest
     {
         public string SalesAgent { get; set; } = string.Empty;
+        public int? DatasetId { get; set; }
 
         // New quarterly-model true features (5 total). Nullable so they can be
         // derived from the backward-compatible fields below when not supplied.
@@ -109,6 +110,7 @@ namespace SalesIntelligence.Api.DTOs
     public class EmployeeRevenuePredictRequest
     {
         public string SalesAgent { get; set; } = string.Empty;
+        public int? DatasetId { get; set; }
 
         // New yearly-model true features (4 total).
         public float? Revenue { get; set; }
